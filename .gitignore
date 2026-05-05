@@ -1,0 +1,14 @@
+bin/
+obj/
+.dotnet-home/
+data/
+logs/
+media/
+models/
+frontend/app/node_modules/
+frontend/app/dist/
+*.user
+*.suo
+.vs/
+.idea/
+.DS_Store

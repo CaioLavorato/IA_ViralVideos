@@ -1,0 +1,56 @@
+services:
+  backend-api:
+    build:
+      context: .
+      dockerfile: src/Api/Dockerfile
+    container_name: video-saas-api
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: Data Source=/app/data/videosaas.db
+      Ollama__BaseUrl: http://host.docker.internal:11434
+      ComfyUI__BaseUrl: http://host.docker.internal:8188
+      Media__RootPath: /app/media
+      Media__DockerBindRootPath: ${VIDEO_MEDIA_HOST_PATH:-./media}
+      Media__PiperModelsPath: ${PIPER_MODELS_HOST_PATH:-./models/piper}
+      Media__PiperImage: rhasspy/wyoming-piper:latest
+      Media__FfmpegImage: jrottenberg/ffmpeg:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./media:/app/media
+      - ./models/piper:/app/models/piper:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend-ui:
+    build:
+      context: .
+      dockerfile: frontend/app/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: video-saas-ui
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend-api
+
+  ffmpeg-runner:
+    image: jrottenberg/ffmpeg:latest
+    container_name: video-saas-ffmpeg-runner
+    profiles: ["runner"]
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./media:/work
+
+  piper-runner:
+    image: rhasspy/wyoming-piper:latest
+    container_name: video-saas-piper-runner
+    profiles: ["runner"]
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./media:/work
+      - ./models/piper:/models:ro

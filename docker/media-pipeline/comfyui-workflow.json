@@ -1,0 +1,5 @@
+{
+  "description": "Template reference for ComfyUI. The backend sends an equivalent API workflow dynamically and does not require this file at runtime.",
+  "target": "1080x1920 vertical images",
+  "nodes": ["CheckpointLoaderSimple", "CLIPTextEncode", "EmptyLatentImage", "KSampler", "VAEDecode", "SaveImage"]
+}
