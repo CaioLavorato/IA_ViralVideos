@@ -74,12 +74,11 @@ const formatLabels: Record<string, string> = {
 
 const imageModels = [
   { provider: 'comfyui', model: 'local', label: 'ComfyUI local', detail: 'modelo local atual' },
-  { provider: 'fal', model: 'fal-flux-schnell', label: 'fal.ai FLUX schnell', detail: 'rápido e leve' },
-  { provider: 'fal', model: 'fal-flux-dev', label: 'fal.ai FLUX dev', detail: 'qualidade maior' },
-  { provider: 'replicate', model: 'replicate-flux-schnell', label: 'Replicate FLUX schnell', detail: 'API simples' },
-  { provider: 'replicate', model: 'replicate-flux-dev', label: 'Replicate FLUX dev', detail: 'boa qualidade' },
-  { provider: 'together', model: 'together-flux-schnell', label: 'Together FLUX schnell', detail: 'API rápida' },
-  { provider: 'huggingface', model: 'hf-flux-dev', label: 'Hugging Face FLUX dev', detail: 'Inference Providers' }
+  { provider: 'pollinations', model: 'pollinations-flux', label: 'Pollinations FLUX (Grátis)', detail: '100% gratuito e rápido' },
+  { provider: 'huggingface', model: 'hf-flux-schnell', label: 'Hugging Face FLUX schnell', detail: 'Rápido e estável' },
+  { provider: 'huggingface', model: 'hf-realvis-xl', label: 'Hugging Face RealVisXL', detail: 'Ultra realismo' },
+  { provider: 'huggingface', model: 'hf-juggernaut-xl', label: 'Hugging Face Juggernaut', detail: 'Viral aesthetic' },
+  { provider: 'fal', model: 'fal-flux-schnell', label: 'fal.ai FLUX (Turbo)', detail: 'Requer Saldo ($$$)' },
 ];
 
 function statusLabel(status: VideoStatus) {

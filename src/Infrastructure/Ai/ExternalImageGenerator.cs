@@ -22,16 +22,31 @@ public sealed class ExternalImageGenerator(
     {
         var model = ImageGenerationModels.Resolve(job.ImageProvider, job.ImageModel);
         var key = GetProviderKey(model.Provider);
-        if (string.IsNullOrWhiteSpace(key))
+        if (string.IsNullOrWhiteSpace(key) && !model.Provider.Equals("pollinations", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"Provedor de imagem '{model.Provider}' selecionado, mas a API key nÃ£o foi configurada. Configure ImageGeneration__{ProviderKeyName(model.Provider)} no ambiente.");
+            throw new InvalidOperationException($"Provedor de imagem '{model.Provider}' selecionado, mas a API key não foi configurada. Configure ImageGeneration__{ProviderKeyName(model.Provider)} no ambiente.");
         }
 
         var preset = VideoFormatPreset.FromCode(job.Format);
         var prompt = ImageGenerationModels.BuildPrompt(scene, job.ImageType, preset);
-        var bytes = model.Provider.Equals("huggingface", StringComparison.OrdinalIgnoreCase)
-            ? await GenerateWithHuggingFaceAsync(model, key, prompt, preset, cancellationToken)
-            : throw new NotSupportedException($"Provider '{model.Provider}' ainda nÃ£o estÃ¡ ativo no backend. Selecione ComfyUI local ou Hugging Face FLUX.");
+        
+        byte[] bytes;
+        if (model.Provider.Equals("huggingface", StringComparison.OrdinalIgnoreCase))
+        {
+            bytes = await GenerateWithHuggingFaceAsync(model, key, prompt, preset, cancellationToken);
+        }
+        else if (model.Provider.Equals("fal", StringComparison.OrdinalIgnoreCase))
+        {
+            bytes = await GenerateWithFalAsync(model, key, prompt, preset, cancellationToken);
+        }
+        else if (model.Provider.Equals("pollinations", StringComparison.OrdinalIgnoreCase))
+        {
+            bytes = await GenerateWithPollinationsAsync(model, prompt, preset, cancellationToken);
+        }
+        else
+        {
+            throw new NotSupportedException($"Provider '{model.Provider}' ainda não está ativo no backend.");
+        }
 
         var jobDir = paths.GetJobDirectory(job.TenantId, job.Id);
         Directory.CreateDirectory(jobDir);
@@ -41,6 +56,20 @@ public sealed class ExternalImageGenerator(
         return imagePath;
     }
 
+    private async Task<byte[]> GenerateWithPollinationsAsync(
+        ImageModelInfo model,
+        string prompt,
+        VideoFormatPreset preset,
+        CancellationToken cancellationToken)
+    {
+        // Pollinations.ai usa uma URL simples: https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}&nologo=true&model=flux
+        var encodedPrompt = Uri.EscapeDataString(prompt);
+        var url = $"https://image.pollinations.ai/prompt/{encodedPrompt}?width={preset.Width}&height={preset.Height}&nologo=true&model=flux&seed={Random.Shared.Next()}";
+        
+        logger.LogInformation("Calling Pollinations.ai (Free) with prompt: {Prompt}", prompt);
+        return await httpClient.GetByteArrayAsync(url, cancellationToken);
+    }
+
     private async Task<byte[]> GenerateWithHuggingFaceAsync(
         ImageModelInfo model,
         string token,
@@ -48,7 +77,7 @@ public sealed class ExternalImageGenerator(
         VideoFormatPreset preset,
         CancellationToken cancellationToken)
     {
-        var endpoint = $"https://router.huggingface.co/hf-inference/models/{Uri.EscapeDataString(model.Model)}";
+        var endpoint = $"https://api-inference.huggingface.co/models/{model.Model}";
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = JsonContent.Create(new
@@ -138,6 +167,70 @@ public sealed class ExternalImageGenerator(
             ? value[(commaIndex + 1)..]
             : value;
         return Convert.FromBase64String(base64);
+    }
+
+    private async Task<byte[]> GenerateWithFalAsync(
+        ImageModelInfo model,
+        string apiKey,
+        string prompt,
+        VideoFormatPreset preset,
+        CancellationToken cancellationToken)
+    {
+        var endpoint = $"https://queue.fal.run/{model.Model}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Key", apiKey);
+        
+        var payload = new
+        {
+            prompt,
+            image_size = preset.Code == "youtube_16_9" ? "landscape_16_9" : "portrait_9_16",
+            num_inference_steps = 4,
+            enable_safety_checker = false
+        };
+
+        request.Content = JsonContent.Create(payload, options: JsonOptions);
+
+        logger.LogInformation("Calling Fal.ai provider with model {Model}", model.Model);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"Fal.ai generation failed: {error}");
+        }
+
+        var queueResult = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+        var requestId = queueResult.GetProperty("request_id").GetString();
+        
+        // Polling simples para o resultado
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(1000, cancellationToken);
+            using var pollReq = new HttpRequestMessage(HttpMethod.Get, $"https://queue.fal.run/requests/{requestId}/status");
+            pollReq.Headers.Authorization = new AuthenticationHeaderValue("Key", apiKey);
+            using var pollRes = await httpClient.SendAsync(pollReq, cancellationToken);
+            
+            var statusDoc = await pollRes.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+            var status = statusDoc.GetProperty("status").GetString();
+            
+            if (status == "COMPLETED")
+            {
+                using var resultReq = new HttpRequestMessage(HttpMethod.Get, $"https://queue.fal.run/requests/{requestId}");
+                resultReq.Headers.Authorization = new AuthenticationHeaderValue("Key", apiKey);
+                using var resultRes = await httpClient.SendAsync(resultReq, cancellationToken);
+                var result = await resultRes.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                
+                var imageUrl = result.GetProperty("images")[0].GetProperty("url").GetString()!;
+                return await httpClient.GetByteArrayAsync(imageUrl, cancellationToken);
+            }
+            
+            if (status == "FAILED")
+            {
+                throw new InvalidOperationException("Fal.ai task failed");
+            }
+        }
+
+        throw new OperationCanceledException();
     }
 
     private string? GetProviderKey(string provider) => provider.ToLowerInvariant() switch

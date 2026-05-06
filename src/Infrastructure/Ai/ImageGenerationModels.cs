@@ -7,12 +7,12 @@ public static class ImageGenerationModels
     public static readonly IReadOnlyDictionary<string, ImageModelInfo> Models = new Dictionary<string, ImageModelInfo>(StringComparer.OrdinalIgnoreCase)
     {
         ["local"] = new("comfyui", "local", "ComfyUI local", "Modelo local atual do ComfyUI"),
-        ["fal-flux-schnell"] = new("fal", "fal-ai/flux/schnell", "fal.ai FLUX.1 schnell", "Rápido, licença mais amigável, ótimo para protótipo"),
-        ["fal-flux-dev"] = new("fal", "fal-ai/flux/dev", "fal.ai FLUX.1 dev", "Qualidade maior, confira licença antes de uso comercial"),
-        ["replicate-flux-schnell"] = new("replicate", "black-forest-labs/flux-schnell", "Replicate FLUX.1 schnell", "Boa opção por API com setup simples"),
-        ["replicate-flux-dev"] = new("replicate", "black-forest-labs/flux-dev", "Replicate FLUX.1 dev", "Qualidade maior, confira licença antes de uso comercial"),
-        ["together-flux-schnell"] = new("together", "black-forest-labs/FLUX.1-schnell", "Together FLUX.1 schnell", "API rápida para geração de imagem"),
-        ["hf-flux-dev"] = new("huggingface", "black-forest-labs/FLUX.1-dev", "Hugging Face FLUX.1 dev", "Usa Inference Providers; exige token e aceite da licença")
+        ["pollinations-flux"] = new("pollinations", "flux", "Pollinations FLUX (Grátis)", "100% gratuito e rápido"),
+        ["fal-flux-schnell"] = new("fal", "fal-ai/flux/schnell", "fal.ai FLUX (Turbo)", "O mais rápido e estável - Qualidade incrível em 2s"),
+        ["hf-flux-schnell"] = new("huggingface", "black-forest-labs/FLUX.1-schnell", "Hugging Face FLUX schnell", "Rápido e geralmente disponível no Inference API"),
+        ["hf-realvis-xl"] = new("huggingface", "SG161222/RealVisXL_V4.0", "Hugging Face RealVisXL V4.0", "Ultra-realismo, ótimo para vídeos dark/virais"),
+        ["hf-juggernaut-xl"] = new("huggingface", "RunDiffusion/Juggernaut-XL-v9", "Hugging Face Juggernaut XL", "Estética viral, muito estável na API"),
+        ["hf-flux-dev"] = new("huggingface", "black-forest-labs/FLUX.1-schnell", "Hugging Face FLUX.1 dev", "Fallback para Schnell devido a limitações da API gratuita")
     };
 
     public static ImageModelInfo Resolve(string? provider, string? model)
@@ -35,29 +35,25 @@ public static class ImageGenerationModels
     {
         var style = imageType.Trim().ToLowerInvariant() switch
         {
-            "cartoon" => "clean modern editorial illustration, expressive but natural anatomy",
-            "realista" => "realistic documentary photo, natural skin texture, believable anatomy",
-            _ => "realistic cinematic social media still, natural skin texture, believable anatomy"
+            "cartoon" => "clean modern editorial illustration, expressive but natural anatomy, 4k",
+            "realista" => "hyper-realistic documentary photo, high detail, 8k, natural lighting, sharp focus",
+            _ => "cinematic film still, high detail, 8k, moody lighting, professional composition"
         };
 
         return string.Join(", ", [
             scene.ImagePrompt,
             style,
             preset.AspectRatioPrompt,
-            "adult subject when a person is shown",
-            "modern Brazilian social media context",
-            "clear composition with one main subject",
-            "natural facial expression",
-            "proportional hands and fingers",
-            "smartphone must look like a normal modern phone when present",
-            "no readable text inside the image",
-            "soft daylight or clean studio lighting",
-            "sharp focus",
-            "high detail"
+            "no emojis",
+            "no floating icons",
+            "no interface elements",
+            "clean image",
+            "high resolution",
+            "professional color grading"
         ]);
     }
 
-    public const string NegativePrompt = "low quality, blurry, watermark, text, logo, caption, poster, meme text, distorted face, deformed face, uncanny, plastic skin, doll face, oversized smile, bad teeth, distorted eyes, crossed eyes, bad hands, extra fingers, missing fingers, fused fingers, warped phone, malformed smartphone, child, teenager, nude, nsfw";
+    public const string NegativePrompt = "emojis, icons, computer interface, buttons, text, watermark, logo, blurry, distorted face, bad hands, extra fingers, malformed, low quality, cartoonish (when realistic selected), messy background";
 }
 
 public sealed record ImageModelInfo(string Provider, string Model, string Label, string Description);

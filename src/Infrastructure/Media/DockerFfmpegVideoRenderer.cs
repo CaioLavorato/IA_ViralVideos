@@ -61,9 +61,9 @@ public sealed class DockerFfmpegVideoRenderer(
         sb.AppendLine();
         sb.AppendLine("[V4+ Styles]");
         sb.AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding");
-        var fontSize = preset.Code.Contains("9_16", StringComparison.OrdinalIgnoreCase) ? 62 : 48;
-        var marginV = preset.Code.Contains("9_16", StringComparison.OrdinalIgnoreCase) ? 190 : 80;
-        sb.AppendLine($"Style: Caption,Arial,{fontSize},&H00FFFFFF,&H0000E6FF,&H00201910,&HAA000000,-1,0,0,0,100,100,0,0,3,4,1,2,80,80,{marginV},1");
+        var fontSize = preset.Code.Contains("9_16", StringComparison.OrdinalIgnoreCase) ? 78 : 54;
+        // Alignment 5 = Centro da tela
+        sb.AppendLine($"Style: Caption,Arial Black,{fontSize},&H0000FFFF,&H0000E6FF,&H00000000,&HAA000000,-1,0,0,0,100,100,0,0,1,4,1,5,0,0,0,1");
         sb.AppendLine("[Events]");
         sb.AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
 
@@ -71,15 +71,16 @@ public sealed class DockerFfmpegVideoRenderer(
         foreach (var scene in job.Scenes.OrderBy(scene => scene.Index))
         {
             var duration = TimeSpan.FromSeconds(Math.Max(2.5, scene.EstimatedSeconds));
-            var chunks = SplitCaption(scene.Text);
+            // SplitCaption menor para o estilo "pular" na tela
+            var chunks = SplitCaption(scene.Text, 18); 
             var chunkDuration = TimeSpan.FromSeconds(duration.TotalSeconds / chunks.Count);
 
             for (var i = 0; i < chunks.Count; i++)
             {
                 var start = current + TimeSpan.FromSeconds(i * chunkDuration.TotalSeconds);
                 var end = i == chunks.Count - 1 ? current + duration : start + chunkDuration;
-                var text = EscapeAss(chunks[i]);
-                sb.AppendLine($"Dialogue: 0,{FormatAssTime(start)},{FormatAssTime(end)},Caption,,0,0,0,,{{\\u1\\bord4\\shad1\\blur0.5}}{text}");
+                var text = EscapeAss(chunks[i].ToUpperInvariant()); // Tudo em MAIÚSCULO
+                sb.AppendLine($"Dialogue: 0,{FormatAssTime(start)},{FormatAssTime(end)},Caption,,0,0,0,,{{\\bord5\\shad0\\blur0.2}}{text}");
             }
 
             current += duration;
@@ -88,7 +89,7 @@ public sealed class DockerFfmpegVideoRenderer(
         await File.WriteAllTextAsync(captionsPath, sb.ToString(), Encoding.UTF8, cancellationToken);
     }
 
-    private static List<string> SplitCaption(string text)
+    private static List<string> SplitCaption(string text, int maxChars = 34)
     {
         var words = text
             .Replace("\r", " ")
@@ -99,7 +100,7 @@ public sealed class DockerFfmpegVideoRenderer(
         var current = new StringBuilder();
         foreach (var word in words)
         {
-            if (current.Length > 0 && current.Length + word.Length > 34)
+            if (current.Length > 0 && current.Length + word.Length > maxChars)
             {
                 chunks.Add(current.ToString());
                 current.Clear();
