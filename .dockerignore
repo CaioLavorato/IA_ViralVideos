@@ -1,0 +1,11 @@
+﻿**/bin/
+**/obj/
+.git/
+.vs/
+.dotnet-home/
+data/
+logs/
+media/
+models/
+frontend/app/node_modules/
+frontend/app/dist/

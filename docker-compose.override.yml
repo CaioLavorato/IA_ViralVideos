@@ -1,0 +1,9 @@
+services:
+  backend-api:
+    environment:
+      Media__PiperImage: piper-local
+    volumes:
+      - C:\docker\media-pipeline\data:/app/data
+      - C:\docker\media-pipeline\work:/app/media
+      - C:\docker\media-pipeline\voices:/app/models/piper:ro
+      - /var/run/docker.sock:/var/run/docker.sock

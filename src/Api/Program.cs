@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using VideoSaaS.Application;
 using VideoSaaS.Application.Tenants.GetTenants;
@@ -7,6 +8,7 @@ using VideoSaaS.Application.Videos.GetVideo;
 using VideoSaaS.Application.Videos.GetVideos;
 using VideoSaaS.Application.Videos.DeleteVideo;
 using VideoSaaS.Infrastructure;
+using VideoSaaS.Infrastructure.Media;
 using VideoSaaS.Infrastructure.Persistence;
 using VideoSaaS.Workers;
 
@@ -70,6 +72,49 @@ app.MapGet("/videos/{id:guid}", async (Guid id, ISender sender, CancellationToke
     return video is null ? Results.NotFound() : Results.Ok(video);
 });
 
+app.MapGet("/videos/{id:guid}/artifacts/{kind}", async Task<IResult> (
+    Guid id,
+    string kind,
+    AppDbContext db,
+    MediaPathBuilder paths,
+    HttpContext http,
+    CancellationToken ct) =>
+{
+    var tenantId = ReadTenantId(http);
+    var job = await db.VideoJobs.AsNoTracking()
+        .FirstOrDefaultAsync(j => j.Id == id && j.TenantId == tenantId, ct);
+
+    if (job is null)
+    {
+        return Results.NotFound();
+    }
+
+    var filePath = kind.ToLowerInvariant() switch
+    {
+        "final" or "reel" => job.ReelPath,
+        "base" or "video" => job.VideoPath,
+        "audio" or "wav" => job.AudioPath,
+        _ => null
+    };
+
+    if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath))
+    {
+        return Results.NotFound();
+    }
+
+    var fullPath = Path.GetFullPath(filePath);
+    var root = Path.GetFullPath(paths.GetRootDirectory());
+    if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.BadRequest();
+    }
+
+    var contentType = Path.GetExtension(fullPath).Equals(".wav", StringComparison.OrdinalIgnoreCase)
+        ? "audio/wav"
+        : "video/mp4";
+    return Results.File(fullPath, contentType, Path.GetFileName(fullPath), enableRangeProcessing: true);
+});
+
 app.MapDelete("/videos/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
 {
     await sender.Send(new DeleteVideoCommand(id), ct);
@@ -83,5 +128,12 @@ app.MapGet("/tenants", async (ISender sender, CancellationToken ct) =>
 });
 
 app.Run();
+
+static Guid ReadTenantId(HttpContext http)
+{
+    return Guid.TryParse(http.Request.Headers["X-Tenant-Id"], out var tenantId)
+        ? tenantId
+        : Guid.Parse("11111111-1111-1111-1111-111111111111");
+}
 
 public partial class Program;

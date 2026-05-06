@@ -15,6 +15,8 @@ public sealed record VideoJobDto(
     string Voice,
     int SceneCount,
     string ImageType,
+    string ImageProvider,
+    string ImageModel,
     string Format,
     VideoJobStatus Status,
     List<SceneSpec> Scenes,
@@ -27,7 +29,7 @@ public sealed record VideoJobDto(
 {
     public static VideoJobDto FromEntity(VideoJob job) => new(
         job.Id, job.TenantId, job.UserId, job.Theme, job.Style, job.Duration,
-        job.Tone, job.Voice, job.SceneCount, job.ImageType, job.Format,
-        job.Status, job.Scenes, job.ScriptJson, job.VideoPath, job.ReelPath,
+        job.Tone, job.Voice, job.SceneCount, job.ImageType, job.ImageProvider,
+        job.ImageModel, job.Format, job.Status, job.Scenes, job.ScriptJson, job.VideoPath, job.ReelPath,
         job.AudioPath, job.Error, job.CreatedAt);
 }

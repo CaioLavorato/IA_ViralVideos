@@ -22,7 +22,9 @@ public sealed class GenerateVideoCommandHandler(
         {
             Voice = string.IsNullOrWhiteSpace(command.Request.Voice) ? tenant.Settings.DefaultVoice : command.Request.Voice,
             Style = string.IsNullOrWhiteSpace(command.Request.Style) ? tenant.Settings.DefaultStyle : command.Request.Style,
-            SceneCount = Math.Clamp(command.Request.SceneCount, 1, tenant.Settings.MaxScenesPerVideo)
+            SceneCount = Math.Clamp(command.Request.SceneCount, 1, tenant.Settings.MaxScenesPerVideo),
+            ImageProvider = string.IsNullOrWhiteSpace(command.Request.ImageProvider) ? "comfyui" : command.Request.ImageProvider,
+            ImageModel = string.IsNullOrWhiteSpace(command.Request.ImageModel) ? "local" : command.Request.ImageModel
         };
 
         var period = new DateOnly(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1);
@@ -50,6 +52,8 @@ public sealed class GenerateVideoCommandHandler(
             Voice = request.Voice,
             SceneCount = request.SceneCount,
             ImageType = request.ImageType,
+            ImageProvider = request.ImageProvider!,
+            ImageModel = request.ImageModel!,
             Format = request.Format,
             Status = VideoJobStatus.Queued
         };

@@ -6,7 +6,8 @@ namespace VideoSaaS.Application.Videos.DeleteVideo;
 
 public sealed class DeleteVideoCommandHandler(
     IAppDbContext db,
-    ITenantContext tenantContext) : IRequestHandler<DeleteVideoCommand>
+    ITenantContext tenantContext,
+    IVideoArtifactStore artifacts) : IRequestHandler<DeleteVideoCommand>
 {
     public async Task Handle(DeleteVideoCommand request, CancellationToken cancellationToken)
     {
@@ -15,6 +16,7 @@ public sealed class DeleteVideoCommandHandler(
 
         if (job is not null)
         {
+            await artifacts.DeleteArtifactsAsync(job, cancellationToken);
             db.VideoJobs.Remove(job);
             await db.SaveChangesAsync(cancellationToken);
         }

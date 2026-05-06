@@ -20,6 +20,8 @@ public static class DbInitializer
         }
 
         await db.Database.EnsureCreatedAsync(cancellationToken);
+        await EnsureColumnAsync(db, logger, "VideoJobs", "ImageProvider", "TEXT NOT NULL DEFAULT 'comfyui'", cancellationToken);
+        await EnsureColumnAsync(db, logger, "VideoJobs", "ImageModel", "TEXT NOT NULL DEFAULT 'local'", cancellationToken);
 
         if (await db.Tenants.AnyAsync(cancellationToken))
         {
@@ -53,5 +55,37 @@ public static class DbInitializer
         db.Billing.Add(new BillingRecord { TenantId = tenant.Id, Plan = tenant.Plan });
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Seeded demo tenant {TenantId}", tenant.Id);
+    }
+
+    private static async Task EnsureColumnAsync(
+        AppDbContext db,
+        ILogger logger,
+        string tableName,
+        string columnName,
+        string definition,
+        CancellationToken cancellationToken)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info(\"{tableName}\");";
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        await db.Database.ExecuteSqlRawAsync(
+            $"ALTER TABLE \"{tableName}\" ADD COLUMN \"{columnName}\" {definition};",
+            cancellationToken);
+        logger.LogInformation("Added missing SQLite column {Table}.{Column}", tableName, columnName);
     }
 }

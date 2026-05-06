@@ -14,6 +14,10 @@ services:
       Media__PiperModelsPath: ${PIPER_MODELS_HOST_PATH:-./models/piper}
       Media__PiperImage: rhasspy/wyoming-piper:latest
       Media__FfmpegImage: jrottenberg/ffmpeg:latest
+      ImageGeneration__FalApiKey: ${FAL_API_KEY:-}
+      ImageGeneration__ReplicateApiToken: ${REPLICATE_API_TOKEN:-}
+      ImageGeneration__TogetherApiKey: ${TOGETHER_API_KEY:-}
+      ImageGeneration__HuggingFaceToken: ${HF_TOKEN:-}
     ports:
       - "8080:8080"
     volumes:

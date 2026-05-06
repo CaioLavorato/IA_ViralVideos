@@ -8,4 +8,6 @@ public sealed record VideoGenerationRequest(
     string Voice,
     int SceneCount,
     string ImageType,
-    string Format);
+    string Format,
+    string? ImageProvider = null,
+    string? ImageModel = null);

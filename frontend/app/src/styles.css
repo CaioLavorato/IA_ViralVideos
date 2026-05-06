@@ -198,7 +198,7 @@ textarea:focus {
   display: flex;
   gap: 14px;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .status {
@@ -220,6 +220,23 @@ textarea:focus {
 .status.falhou {
   background: #ffecec;
   color: #a82727;
+}
+
+.metaPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.metaPills span {
+  background: #f2f5f9;
+  border: 1px solid #dce4ef;
+  border-radius: 999px;
+  color: #4b5567;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 9px;
 }
 
 .scriptList {
@@ -250,7 +267,7 @@ textarea:focus {
 .artifactGrid {
   border-top: 1px solid #e4eaf2;
   display: grid;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
   padding-top: 14px;
 }
@@ -259,6 +276,73 @@ textarea:focus {
   color: #4b5567;
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.artifactHeader {
+  display: grid;
+  gap: 2px;
+}
+
+.artifactHeader strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.artifactHeader small,
+.artifactGrid summary {
+  color: #66758a;
+  font-size: 12px;
+}
+
+.artifactActions,
+.artifactLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.artifactButton {
+  align-items: center;
+  background: #f9fbfe;
+  border: 1px solid #cfd9e6;
+  border-radius: 6px;
+  color: #172033;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.primaryArtifact {
+  background: #172033;
+  border-color: #172033;
+  color: #ffffff;
+}
+
+.artifactLinks a {
+  color: #1959b8;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.artifactGrid details {
+  border-top: 1px dashed #dce4ef;
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.artifactGrid details[open] summary {
+  margin-bottom: 8px;
+}
+
+.artifactGrid summary {
+  cursor: pointer;
+  font-weight: 750;
 }
 
 .videoList {

@@ -1,10 +1,11 @@
 bin/
 obj/
 .dotnet-home/
-data/
-logs/
-media/
-models/
+/data/
+src/Api/data/
+/logs/
+/media/
+/models/
 frontend/app/node_modules/
 frontend/app/dist/
 *.user

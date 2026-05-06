@@ -16,6 +16,8 @@ public sealed class VideoJob : ITenantEntity
     public string Voice { get; set; } = "pt_BR-cadu-medium";
     public int SceneCount { get; set; } = 3;
     public string ImageType { get; set; } = "cinematic";
+    public string ImageProvider { get; set; } = "comfyui";
+    public string ImageModel { get; set; } = "local";
     public string Format { get; set; } = "reels_9_16";
     public VideoJobStatus Status { get; set; } = VideoJobStatus.Queued;
     public List<SceneSpec> Scenes { get; set; } = [];

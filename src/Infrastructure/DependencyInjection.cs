@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.Configure<OllamaOptions>(configuration.GetSection("Ollama"));
         services.Configure<ComfyUiOptions>(configuration.GetSection("ComfyUI"));
         services.Configure<MediaOptions>(configuration.GetSection("Media"));
+        services.Configure<ImageGenerationOptions>(configuration.GetSection("ImageGeneration"));
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(configuration.GetConnectionString("Default") ?? "Data Source=data/videosaas.db"));
@@ -31,14 +32,20 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(options.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });
-        services.AddHttpClient<IImageGenerator, ComfyUiImageGenerator>((sp, client) =>
+        services.AddHttpClient<ComfyUiImageGenerator>((sp, client) =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ComfyUiOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });
+        services.AddHttpClient<ExternalImageGenerator>(client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+        });
+        services.AddScoped<IImageGenerator, ImageGeneratorRouter>();
         services.AddScoped<ITtsService, PiperTtsService>();
         services.AddScoped<IVideoRenderer, DockerFfmpegVideoRenderer>();
+        services.AddScoped<IVideoArtifactStore, VideoArtifactStore>();
         services.AddScoped<IVideoPipeline, VideoPipeline>();
         return services;
     }

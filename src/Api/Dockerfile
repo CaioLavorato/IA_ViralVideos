@@ -10,13 +10,13 @@ RUN dotnet restore src/Api/Api.csproj
 COPY . .
 RUN dotnet publish src/Api/Api.csproj -c Release -o /app/publish --no-restore
 
+FROM docker:27-cli AS docker-cli
+
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends docker.io \
-    && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /app/data /app/media /app/models/piper
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Api.dll"]

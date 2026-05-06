@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VideoSaaS.Application.Abstractions;
+using VideoSaaS.Domain.Entities;
 using VideoSaaS.Domain.ValueObjects;
 using VideoSaaS.Infrastructure.Media;
 
@@ -16,12 +17,12 @@ public sealed class ComfyUiImageGenerator(
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<string> GenerateSceneImageAsync(Guid tenantId, Guid jobId, SceneSpec scene, string imageType, string format, CancellationToken cancellationToken)
+    public async Task<string> GenerateSceneImageAsync(VideoJob job, SceneSpec scene, CancellationToken cancellationToken)
     {
         var checkpoint = await GetCheckpointNameAsync(cancellationToken);
-        var preset = VideoFormatPreset.FromCode(format);
-        var prompt = $"{scene.ImagePrompt}, {imageType}, {preset.AspectRatioPrompt}, high detail, cinematic lighting";
-        var payload = BuildPromptPayload(prompt, jobId, scene.Index, checkpoint, options.Value, preset);
+        var preset = VideoFormatPreset.FromCode(job.Format);
+        var prompt = ImageGenerationModels.BuildPrompt(scene, job.ImageType, preset);
+        var payload = BuildPromptPayload(prompt, job.Id, scene.Index, checkpoint, options.Value, preset);
         logger.LogInformation("Sending scene {SceneIndex} to ComfyUI at {BaseUrl}", scene.Index, options.Value.BaseUrl);
 
         var response = await httpClient.PostAsJsonAsync("/prompt", payload, JsonOptions, cancellationToken);
@@ -33,7 +34,7 @@ public sealed class ComfyUiImageGenerator(
         var fileName = await WaitForImageAsync(promptId, cancellationToken);
         var bytes = await httpClient.GetByteArrayAsync($"/view?filename={Uri.EscapeDataString(fileName)}&type=output", cancellationToken);
 
-        var jobDir = paths.GetJobDirectory(tenantId, jobId);
+        var jobDir = paths.GetJobDirectory(job.TenantId, job.Id);
         var imagePath = Path.Combine(jobDir, $"scene-{scene.Index:00}.png");
         await File.WriteAllBytesAsync(imagePath, bytes, cancellationToken);
         return imagePath;
@@ -86,7 +87,7 @@ public sealed class ComfyUiImageGenerator(
                 ["4"] = new { class_type = "CheckpointLoaderSimple", inputs = new { ckpt_name = checkpoint } },
                 ["5"] = new { class_type = "EmptyLatentImage", inputs = new { batch_size = 1, height, width } },
                 ["6"] = new { class_type = "CLIPTextEncode", inputs = new { clip = Ref("4", 1), text = prompt } },
-                ["7"] = new { class_type = "CLIPTextEncode", inputs = new { clip = Ref("4", 1), text = "low quality, blurry, watermark, text, logo, distorted" } },
+                ["7"] = new { class_type = "CLIPTextEncode", inputs = new { clip = Ref("4", 1), text = ImageGenerationModels.NegativePrompt } },
                 ["8"] = new { class_type = "VAEDecode", inputs = new { samples = Ref("3", 0), vae = Ref("4", 2) } },
                 ["9"] = new { class_type = "SaveImage", inputs = new { filename_prefix = $"videosaas_{jobId:N}_{sceneIndex:00}", images = Ref("8", 0) } }
             }
